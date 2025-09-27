@@ -39,3 +39,7 @@ Execute & Respond: The backend executes this SQL query against the database, ret
 Summarize: The retrieved data is sent back to the Gemini model one last time to generate a human-readable summary, which is also sent to the frontend.
 
 Display: The React frontend displays the AI's summary and the structured data table to the user.
+
+
+To run Python code - uvicorn main:app --reload
+To run ReactJS code - npm start
