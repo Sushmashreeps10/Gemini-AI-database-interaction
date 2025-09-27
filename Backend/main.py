@@ -1,4 +1,3 @@
-# backend/main.py
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -18,24 +17,24 @@ from typing import Dict
 from io import BytesIO
 from dotenv import load_dotenv
 
-# Load environment variables
+
 load_dotenv()
 
-# -------------------- Logging --------------------
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# -------------------- Config --------------------
+
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "mysql+pymysql://root:sushma@localhost:3306/pythonproject"
 )
-GEN_API_KEY = os.getenv("GEN_API_KEY", "AIzaSyDrlydrKYnrUo6766y4MTjZM_tKc9Sjr_Y") # Replace with your key
+GEN_API_KEY = os.getenv("GEN_API_KEY", "AIzaSyDrlydrKYnrUo6766y4MTjZM_tKc9Sjr_Y") 
 
 if not GEN_API_KEY or GEN_API_KEY == "AIzaSyDrlydrKYnrUo6766y4MTjZM_tKc9Sjr_Y":
     logger.warning("GEN_API_KEY not set. LLM calls will fail.")
 
-# -------------------- LLM Setup --------------------
+
 try:
     if GEN_API_KEY:
         genai.configure(api_key=GEN_API_KEY)
@@ -48,7 +47,7 @@ except Exception as e:
     logger.error(f"LLM initialization error: {e}")
     model = None
 
-# -------------------- DB Setup --------------------
+
 try:
     engine = create_engine(DATABASE_URL, pool_pre_ping=True)
     with engine.connect() as conn:
@@ -58,7 +57,6 @@ except Exception as e:
     logger.error(f"Database connection failed: {e}")
     engine = None
 
-# -------------------- App & CORS --------------------
 app = FastAPI(title="AI Data Agent Backend")
 app.add_middleware(
     CORSMiddleware,
@@ -68,11 +66,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -------------------- Pydantic Models --------------------
 class AskRequest(BaseModel):
     question: str
 
-# -------------------- Utilities --------------------
 def json_safe(obj):
     if isinstance(obj, (datetime.datetime, datetime.date)): return obj.isoformat()
     if isinstance(obj, decimal.Decimal): return float(obj)
@@ -99,7 +95,7 @@ def infer_sqlalchemy_type(series: pd.Series):
     if pd.api.types.is_bool_dtype(dtype): return Boolean()
     if pd.api.types.is_datetime64_any_dtype(dtype): return DateTime()
     
-    # Fallback for object types that might be convertible
+   
     try:
         if pd.to_numeric(series.dropna()).dtype in ['int64', 'float64']:
             if (pd.to_numeric(series.dropna()) % 1 == 0).all(): return Integer()
@@ -113,7 +109,6 @@ def infer_sqlalchemy_type(series: pd.Series):
     max_len = int(series.astype(str).str.len().max())
     return String(max(255, max_len))
 
-# ✅ FIX #1: ADD THIS MISSING FUNCTION
 def llm_complete(prompt: str):
     """Simple LLM wrapper — returns string or an error message."""
     if model is None:
@@ -121,7 +116,7 @@ def llm_complete(prompt: str):
         return "LLM model is not configured."
     try:
         response = model.generate_content(prompt)
-        # Clean up response text, removing markdown fences
+        
         clean_text = re.sub(r"```(json|sql)?\n", "", response.text)
         clean_text = re.sub(r"\n```", "", clean_text)
         return clean_text.strip()
@@ -129,7 +124,6 @@ def llm_complete(prompt: str):
         logger.error(f"Error in llm_complete: {e}")
         return f"LLM error: {str(e)}"
 
-# -------------------- Excel Processing Logic --------------------
 def process_excel_bytes(file_bytes: bytes, filename: str) -> Dict:
     if not engine:
         raise HTTPException(status_code=500, detail="Database is not connected.")
@@ -156,12 +150,12 @@ def process_excel_bytes(file_bytes: bytes, filename: str) -> Dict:
         df.columns = new_columns
         
         for col in df.columns:
-            # First, attempt to convert to datetime
+            
             df[col] = pd.to_datetime(df[col], errors='ignore')
-            # If not datetime, attempt numeric
+           
             if not pd.api.types.is_datetime64_any_dtype(df[col].dtype):
                 df[col] = pd.to_numeric(df[col], errors='ignore')
-            # Clean strings
+            
             if isinstance(df[col].dtype, object):
                  df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
 
@@ -169,7 +163,7 @@ def process_excel_bytes(file_bytes: bytes, filename: str) -> Dict:
 
         dtype_map = {col: infer_sqlalchemy_type(df[col]) for col in df.columns}
         
-        # ✅ FIX #2: ENSURE THIS DATE CONVERSION IS HERE
+        
         for col in df.select_dtypes(include=['datetime64[ns]']).columns:
             df[col] = df[col].dt.to_pydatetime()
             
@@ -190,7 +184,6 @@ def process_excel_bytes(file_bytes: bytes, filename: str) -> Dict:
     return created_tables
 
 
-# -------------------- API Endpoints --------------------
 @app.post("/api/upload")
 async def upload_excel(file: UploadFile = File(...)):
     contents = await file.read()
