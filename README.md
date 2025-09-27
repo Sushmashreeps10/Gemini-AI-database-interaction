@@ -1,4 +1,4 @@
-# Gemini-AI-database-interaction.
+# Gemini-AI-Excel-Analysis.
 The AI Data Agent is a web application that transforms how users interact with their data. It allows anyone to upload an Excel spreadsheet, and then ask complex questions about that data in plain English. The application leverages a powerful AI model to understand the user's intent, query the data, and provide clear, insightful answers, effectively turning any spreadsheet into an interactive database.
 
 Core Features
