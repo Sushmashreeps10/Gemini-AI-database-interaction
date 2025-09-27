@@ -42,4 +42,5 @@ Display: The React frontend displays the AI's summary and the structured data ta
 
 
 To run Python code - uvicorn main:app --reload
+
 To run ReactJS code - npm start
